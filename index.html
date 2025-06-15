@@ -30,7 +30,7 @@
       border-radius: 0;
     }
     #scoreboard {
-      color: #fff;
+      color: #000; /* Changed from #fff to black */
       font-family: 'Segoe UI', Arial, sans-serif;
       font-size: 1.2em;
       text-align: center;
@@ -41,6 +41,31 @@
     audio {
       display: none;
     }
+    #startMenu {
+      position:fixed; left:0; top:0; width:100vw; height:100vh; 
+      background:rgba(20,20,40,0.92); z-index:10; display:flex; flex-direction:column; 
+      align-items:center; justify-content:center; color:#fff; font-family:'Times New Roman',serif;
+    }
+    #startMenu button {
+      font-size:1.3em; padding:14px 50px; border-radius:12px; border:none; 
+      background:#7b4c1e; color:#fff; cursor:pointer; box-shadow:0 2px 12px #0008;
+    }
+    /* Game Over Menu Styles */
+    #gameOverMenu {
+      position:fixed; left:0; top:0; width:100vw; height:100vh; 
+      background:rgba(20,20,40,0.92); z-index:20; display:none; flex-direction:column; 
+      align-items:center; justify-content:center; color:#fff; font-family:'Times New Roman',serif;
+    }
+    #gameOverText {
+      font-size:2.2em; margin-bottom:24px;
+    }
+    #finalScore {
+      font-size:1.3em; margin-bottom:36px;
+    }
+    #retryBtn {
+      font-size:1.3em; padding:14px 50px; border-radius:12px; border:none; 
+      background:#7b4c1e; color:#fff; cursor:pointer; box-shadow:0 2px 12px #0008;
+    }
   </style>
 </head>
 <body>
@@ -48,26 +73,37 @@
   <div id="scoreboard">Score: 0 &nbsp; | &nbsp; Lives: 3</div>
   <canvas id="gameCanvas" width="960" height="960"></canvas>
   <audio id="bg-music" src="https://raw.githubusercontent.com/ronits2407/ronits2407.github.io/main/images/background.mp3" autoplay loop></audio>
+  <div id="startMenu">
+    <div style="font-size:2.2em; margin-bottom:24px;">Sasha's Magical Revelation Quest ✨</div>
+    <div style="font-size:1.1em; margin-bottom:36px; max-width:500px; text-align:center;">
+      <br>
+      Get ready for an enchanted quest where every point you earn reveals a secret message from your very own admirer..<br>
+      <b>This isn't just any game; it's a magical journey to uncover what's truly been brewing in my heart,<br>
+         designed just for you. So, grab your wand, cast your best spells, and prepare to discover a hidden charm! </b>
+    </div>
+    <button id="startBtn">Start Game</button>
+  </div>
+  <!-- Add this overlay at the end of your <body> -->
+  <div id="gameOverMenu" style="
+    position:fixed; left:0; top:0; width:100vw; height:100vh; 
+    background:rgba(20,20,40,0.92); z-index:20; display:none; flex-direction:column; 
+    align-items:center; justify-content:center; color:#fff; font-family:'Times New Roman',serif;">
+    <div id="gameOverText" style="font-size:2.2em; margin-bottom:24px;">Game Over!</div>
+    <div id="finalScore" style="font-size:1.3em; margin-bottom:36px;"></div>
+    <button id="retryBtn" style="
+      font-size:1.3em; padding:14px 50px; border-radius:12px; border:none; 
+      background:#7b4c1e; color:#fff; cursor:pointer; box-shadow:0 2px 12px #0008;">
+      Retry
+    </button>
+  </div>
   <script>
-    // Try to play audio on load (may require user interaction in some browsers)
-    window.addEventListener('load', function() {
-      const audio = document.getElementById('bg-music');
-      audio.volume = 0.5;
-      audio.play().catch(() => {
-        const resumeAudio = () => {
-          audio.play();
-          window.removeEventListener('click', resumeAudio);
-          window.removeEventListener('keydown', resumeAudio);
-        };
-        window.addEventListener('click', resumeAudio);
-        window.addEventListener('keydown', resumeAudio);
-      });
-    });
+    // --- Game Variables ---
+    let gameStarted = false;
+    let gameOver = false;
+    let score = 0;
+    let lives = 3;
 
-    const canvas = document.getElementById('gameCanvas');
-    const ctx = canvas.getContext('2d');
-    const scoreboard = document.getElementById('scoreboard');
-
+    // Images
     function loadImage(src, fallbackColor) {
       const img = new Image();
       img.src = src;
@@ -76,29 +112,30 @@
       img.fallbackColor = fallbackColor;
       return img;
     }
-
     const harryImg = loadImage('https://raw.githubusercontent.com/ronits2407/ronits2407.github.io/main/images/harry.png', '#4e9cff');
     const deImg = loadImage('https://raw.githubusercontent.com/ronits2407/ronits2407.github.io/main/images/deatheater.png', '#222');
     const spellImg = loadImage('https://raw.githubusercontent.com/ronits2407/ronits2407.github.io/main/images/spell.png', '#fff');
     const witchImg = loadImage('https://raw.githubusercontent.com/ronits2407/ronits2407.github.io/main/images/witch.png', '#f0e');
-    const witchRImg = loadImage('https://raw.githubusercontent.com/ronits2407/ronits2407.github.io/main/images/witchr.png', '#f0e'); // right-facing witch image
+    const witchRImg = loadImage('https://raw.githubusercontent.com/ronits2407/ronits2407.github.io/main/images/witchr.png', '#f0e');
 
-    // Make Harry 100% bigger
+    // Canvas setup
+    const canvas = document.getElementById('gameCanvas');
+    const ctx = canvas.getContext('2d');
+    const scoreboard = document.getElementById('scoreboard');
+
+    // Main character
     const harryBaseW = 64, harryBaseH = 64;
-    const harryW = harryBaseW * 2, harryH = harryBaseH * 2;
-
-    // Always keep Harry at the center of the canvas
+    const harryW = harryBaseW * 2, harryH = harryBaseH * 2; // 100% bigger
     const centerX = canvas.width / 2;
     const centerY = canvas.height / 2;
     let harry = { x: centerX, y: centerY, w: harryW, h: harryH, speed: 5, angle: 0 };
+
+    // Entities
     let spells = [];
     let deathEaters = [];
     let witches = [];
-    let score = 0;
-    let lives = 3;
-    let gameOver = false;
 
-    // Mouse aiming
+    // Controls
     canvas.addEventListener('mousemove', e => {
       const rect = canvas.getBoundingClientRect();
       const mx = e.clientX - rect.left;
@@ -106,53 +143,47 @@
       harry.angle = Math.atan2(my - harry.y, mx - harry.x);
     });
     canvas.addEventListener('click', shootSpell);
-
-    // Keyboard controls for shooting
     document.addEventListener('keydown', e => {
       if (e.key === ' ' || e.key === 'Spacebar') shootSpell();
     });
 
     function shootSpell() {
-      if (gameOver) return;
+      if (gameOver || !gameStarted) return;
       if (spells.length && Date.now() - spells[spells.length-1].created < 200) return;
       const angle = harry.angle;
       spells.push({
         x: harry.x + Math.cos(angle) * 40,
         y: harry.y + Math.sin(angle) * 40,
         w: 16, h: 16,
-        speed: 10,
+        speed: 18, // Increased from 10 to 18 for faster projectiles
         dx: Math.cos(angle),
         dy: Math.sin(angle),
         created: Date.now()
       });
     }
 
-    // Spawn Death Eaters from the actual window border, not just the canvas
+    // Spawning
+    let lastDeathEaterSpawn = 0;
+    let lastWitchSpawn = 0;
+    const deathEaterInterval = 2200; // was 1200, now slower
+    const witchInterval = 4000;      // was 2200, now slower
+
     function spawnDeathEater() {
       const winW = window.innerWidth;
       const winH = window.innerHeight;
       const border = Math.floor(Math.random() * 4);
       let x, y;
-      if (border === 0) { // top
-        x = Math.random() * winW;
-        y = 0;
-      } else if (border === 1) { // right
-        x = winW;
-        y = Math.random() * winH;
-      } else if (border === 2) { // bottom
-        x = Math.random() * winW;
-        y = winH;
-      } else { // left
-        x = 0;
-        y = Math.random() * winH;
-      }
+      if (border === 0) { x = Math.random() * winW; y = 0; }
+      else if (border === 1) { x = winW; y = Math.random() * winH; }
+      else if (border === 2) { x = Math.random() * winW; y = winH; }
+      else { x = 0; y = Math.random() * winH; }
       const canvasRect = canvas.getBoundingClientRect();
       const cx = (x - canvasRect.left) * (canvas.width / canvasRect.width);
       const cy = (y - canvasRect.top) * (canvas.height / canvasRect.height);
       const angle = Math.atan2(centerY - cy, centerX - cx);
       deathEaters.push({
         x: cx, y: cy, w: 48, h: 48,
-        speed: (2 + Math.random()*1.5) * 0.6, // 3/5 of original
+        speed: (2 + Math.random()*1.5) * 0.6,
         dx: Math.cos(angle),
         dy: Math.sin(angle)
       });
@@ -163,26 +194,17 @@
       const winH = window.innerHeight;
       const border = Math.floor(Math.random() * 4);
       let x, y;
-      if (border === 0) { // top
-        x = Math.random() * winW;
-        y = 0;
-      } else if (border === 1) { // right
-        x = winW;
-        y = Math.random() * winH;
-      } else if (border === 2) { // bottom
-        x = Math.random() * winW;
-        y = winH;
-      } else { // left
-        x = 0;
-        y = Math.random() * winH;
-      }
+      if (border === 0) { x = Math.random() * winW; y = 0; }
+      else if (border === 1) { x = winW; y = Math.random() * winH; }
+      else if (border === 2) { x = Math.random() * winW; y = winH; }
+      else { x = 0; y = Math.random() * winH; }
       const canvasRect = canvas.getBoundingClientRect();
       const cx = (x - canvasRect.left) * (canvas.width / canvasRect.width);
       const cy = (y - canvasRect.top) * (canvas.height / canvasRect.height);
       const angle = Math.atan2(centerY - cy, centerX - cx);
       witches.push({
         x: cx, y: cy, w: 64, h: 64,
-        speed: (1.5 + Math.random()*1) * 0.6, // 3/5 of original
+        speed: (1.5 + Math.random()*1) * 0.6,
         dx: Math.cos(angle),
         dy: Math.sin(angle),
         angle: angle,
@@ -190,6 +212,7 @@
       });
     }
 
+    // Drawing
     function drawImageOrRect(img, x, y, w, h, angle = 0) {
       ctx.save();
       ctx.translate(x, y);
@@ -204,45 +227,35 @@
     }
 
     function drawHarry() {
-      ctx.save();
-      ctx.translate(harry.x, harry.y);
-      ctx.rotate(harry.angle - Math.PI / 2); // Rotate 90 degrees anticlockwise
-      if (harryImg.complete && harryImg.naturalWidth !== 0) {
-        ctx.drawImage(harryImg, -harry.w/2, -harry.h/2, harry.w, harry.h);
-      } else {
-        ctx.fillStyle = harryImg.fallbackColor;
-        ctx.fillRect(-harry.w/2, -harry.h/2, harry.w, harry.h);
-      }
-      ctx.restore();
+      drawImageOrRect(harryImg, harry.x, harry.y, harry.w, harry.h, harry.angle - Math.PI / 2);
     }
 
     function drawSpells() {
-      spells.forEach(spell => {
-        drawImageOrRect(spellImg, spell.x, spell.y, spell.w, spell.h);
-      });
+      for (let i = 0; i < spells.length; i++) {
+        drawImageOrRect(spellImg, spells[i].x, spells[i].y, spells[i].w, spells[i].h);
+      }
     }
 
     function drawDeathEaters() {
-      deathEaters.forEach(de => {
-        drawImageOrRect(deImg, de.x, de.y, de.w, de.h);
-      });
+      for (let i = 0; i < deathEaters.length; i++) {
+        drawImageOrRect(deImg, deathEaters[i].x, deathEaters[i].y, deathEaters[i].w, deathEaters[i].h);
+      }
     }
 
     function drawWitches() {
-      witches.forEach(witch => {
-        // Flying illusion: bobbing up/down and slight rotation
+      for (let i = 0; i < witches.length; i++) {
+        const witch = witches[i];
         const t = Date.now() / 400 + witch.flyOffset;
         const bob = Math.sin(t) * 10;
         ctx.save();
         ctx.translate(witch.x, witch.y + bob);
 
-        // If coming from the right, use witchRImg, else use witchImg
+        // Use witchr.png for right side, else witch.png
         if (witch.dx < 0 && witch.x > centerX) {
-          ctx.rotate(witch.angle); // No flip, just rotate
+          ctx.rotate(witch.angle);
           const img = (witchRImg.complete && witchRImg.naturalWidth !== 0) ? witchRImg : witchImg;
           ctx.drawImage(img, -witch.w/2, -witch.h/2, witch.w, witch.h);
         } else {
-          // For all other directions, rotate and use witchImg
           if (witch.dx < 0) {
             ctx.rotate(witch.angle + Math.PI);
             ctx.scale(1, -1);
@@ -257,86 +270,189 @@
           }
         }
         ctx.restore();
-      });
+      }
     }
 
-    function update() {
-      if (gameOver) return;
+    // --- Post-credits style intro text setup ---
+    const introText = `Hey Sasha! So, um, wow, what are the odds, right?
+     Seeing your name pop up in those 9th-grade lectures, and then bam,
+     same coaching in 11th! Kinda wild, ahaha.
+
+     Honestly, I always thought you seemed super cool back then, and then,
+     like, getting to know you a bit more in coaching? Yeah, you're even cooler,
+     umm, obviously. 😉
+
+      Okay, so this might sound a little, uhh, out of left field,
+      but I've actually liked you for a while now. Like,
+      more than just 'hey, let's study together' liked you. 😅
+
+      So, now that the exams are done and we're officially free (woohoo!),
+      I was kinda hoping we could, you know,
+      maybe start by being really good friends?
+      And then, umm, see where things go?
+      Like, if you'd be open to exploring something more than just friendship with me?
+      No pressure at all, just thought I'd, ahh, finally put it out there! 😊
+    `;
+
+    let introActive = true;
+    let introScrollY = null;
+    let introLines = [];
+
+    // Prepare intro lines (split by line)
+    function prepareIntro() {
+      introLines = introText.split('\n');
+      introScrollY = canvas.height + 40; // Start just below the canvas
+    }
+
+    // Draw scrolling intro text (normal font, slower, right-aligned)
+    function drawIntroScroll() {
+      ctx.save();
+      ctx.font = '24px Arial, sans-serif'; // Normal font
+      ctx.fillStyle = "#fff";
+      ctx.textAlign = "right"; // Align to right
+      ctx.shadowColor = "#000";
+      ctx.shadowBlur = 8;
+
+      const scrollSpeed = 0.2; // Reduced speed for slower scrolling
+      for (let i = 0; i < introLines.length; i++) {
+        ctx.fillText(
+          introLines[i],
+          canvas.width - 40, // 40px from the right edge
+          introScrollY + i * 36
+        );
+      }
+      introScrollY -= scrollSpeed;
+      ctx.restore();
+
+      // Deactivate intro after all lines have scrolled past the top
+      if (introScrollY + introLines.length * 36 < 0) {
+        introActive = false;
+      }
+    }
+
+    // --- Post-credits setup ---
+    const postCreditsText = `After the battle, the castle stood silent.
+Shadows faded, and a new dawn began.
+But in the heart of every wizard, a spark remained.
+Magic, after all, never truly ends...`;
+
+    let postCreditsActive = false;
+    let postCreditsScrollY = null;
+    let postCreditsLines = [];
+
+    // Prepare post-credits lines (split by line)
+    function preparePostCredits() {
+      postCreditsLines = postCreditsText.split('\n');
+      postCreditsScrollY = canvas.height + 40; // Start just below the canvas
+    }
+
+    // Draw scrolling post-credits text
+    function drawPostCreditsScroll() {
+      ctx.save();
+      ctx.font = 'italic 32px "Brush Script MT", "Comic Sans MS", cursive, sans-serif';
+      ctx.fillStyle = "#fff";
+      ctx.textAlign = "center";
+      ctx.shadowColor = "#000";
+      ctx.shadowBlur = 8;
+
+      const scrollSpeed = 1.2;
+      for (let i = 0; i < postCreditsLines.length; i++) {
+        ctx.fillText(
+          postCreditsLines[i],
+          canvas.width / 2,
+          postCreditsScrollY + i * 44
+        );
+      }
+      postCreditsScrollY -= scrollSpeed;
+      ctx.restore();
+    }
+
+    // Load the enemy death sound and set its volume lower
+    const enemyDeadAudio = new Audio('https://raw.githubusercontent.com/ronits2407/ronits2407.github.io/main/images/enemy_dead.mp3');
+    enemyDeadAudio.volume = 0.3; // Set volume to
+
+    // Main update and draw loop
+    function updateAndDraw(now) {
+      if (gameStarted && !gameOver) {
+        // Spawn Death Eaters
+        if (now - lastDeathEaterSpawn > deathEaterInterval) {
+          spawnDeathEater();
+          lastDeathEaterSpawn = now;
+        }
+        // Spawn Witches
+        if (score >= 30 && now - lastWitchSpawn > witchInterval) {
+          spawnWitch();
+          lastWitchSpawn = now;
+        }
+      }
 
       // Move spells
-      spells.forEach(spell => {
+      for (let i = spells.length - 1; i >= 0; i--) {
+        const spell = spells[i];
         spell.x += spell.dx * spell.speed;
         spell.y += spell.dy * spell.speed;
-      });
-      spells = spells.filter(spell =>
-        spell.x > -20 && spell.x < canvas.width+20 &&
-        spell.y > -20 && spell.y < canvas.height+20
-      );
+        if (
+          spell.x < -20 || spell.x > canvas.width + 20 ||
+          spell.y < -20 || spell.y > canvas.height + 20
+        ) {
+          spells.splice(i, 1);
+        }
+      }
 
       // Move Death Eaters
-      deathEaters.forEach(de => {
+      for (let i = deathEaters.length - 1; i >= 0; i--) {
+        const de = deathEaters[i];
         de.x += de.dx * de.speed;
         de.y += de.dy * de.speed;
-      });
-
-      // Move witches
-      witches.forEach(witch => {
-        witch.x += witch.dx * witch.speed;
-        witch.y += witch.dy * witch.speed;
-      });
-
-      // Collision detection: spell hits Death Eater
-      for (let i = deathEaters.length-1; i >= 0; i--) {
-        let de = deathEaters[i];
-        for (let j = spells.length-1; j >= 0; j--) {
-          let spell = spells[j];
-          const dist = Math.hypot(de.x - spell.x, de.y - spell.y);
-          if (dist < 32) {
-            deathEaters.splice(i, 1);
-            spells.splice(j, 1);
-            score++;
-            break;
-          }
-        }
-      }
-
-      // Collision detection: spell hits witch
-      for (let i = witches.length-1; i >= 0; i--) {
-        let witch = witches[i];
-        for (let j = spells.length-1; j >= 0; j--) {
-          let spell = spells[j];
-          const dist = Math.hypot(witch.x - spell.x, witch.y - spell.y);
-          if (dist < 32) {
-            witches.splice(i, 1);
-            spells.splice(j, 1);
-            score++;
-            break;
-          }
-        }
-      }
-
-      // Collision detection: Death Eater or witch hits Harry
-      for (let i = deathEaters.length-1; i >= 0; i--) {
-        let de = deathEaters[i];
-        const dist = Math.hypot(de.x - harry.x, de.y - harry.y);
-        if (dist < 40) {
+        // Collision with Harry
+        if (Math.hypot(de.x - harry.x, de.y - harry.y) < 40) {
           deathEaters.splice(i, 1);
           lives--;
           if (lives <= 0) {
             gameOver = true;
-            scoreboard.textContent = "Game Over! Final Score: " + score;
+            showGameOverMenu();
+          }
+          continue;
+        }
+        // Collision with spells
+        for (let j = spells.length - 1; j >= 0; j--) {
+          if (Math.hypot(de.x - spells[j].x, de.y - spells[j].y) < 32) {
+            deathEaters.splice(i, 1);
+            spells.splice(j, 1);
+            score++;
+            // Play enemy death sound
+            enemyDeadAudio.currentTime = 0;
+            enemyDeadAudio.play();
+            break;
           }
         }
       }
-      for (let i = witches.length-1; i >= 0; i--) {
-        let witch = witches[i];
-        const dist = Math.hypot(witch.x - harry.x, witch.y - harry.y);
-        if (dist < 40) {
+
+      // Move Witches
+      for (let i = witches.length - 1; i >= 0; i--) {
+        const witch = witches[i];
+        witch.x += witch.dx * witch.speed;
+        witch.y += witch.dy * witch.speed;
+        // Collision with Harry
+        if (Math.hypot(witch.x - harry.x, witch.y - harry.y) < 40) {
           witches.splice(i, 1);
           lives--;
           if (lives <= 0) {
             gameOver = true;
-            scoreboard.textContent = "Game Over! Final Score: " + score;
+            showGameOverMenu();
+          }
+          continue;
+        }
+        // Collision with spells
+        for (let j = spells.length - 1; j >= 0; j--) {
+          if (Math.hypot(witch.x - spells[j].x, witch.y - spells[j].y) < 32) {
+            witches.splice(i, 1);
+            spells.splice(j, 1);
+            score++;
+            // Play enemy death sound
+            enemyDeadAudio.currentTime = 0;
+            enemyDeadAudio.play();
+            break;
           }
         }
       }
@@ -344,38 +460,59 @@
       // Update scoreboard
       if (!gameOver)
         scoreboard.textContent = "Score: " + score + "  |  Lives: " + lives;
-    }
 
-    function draw() {
+      // Draw everything
       ctx.clearRect(0, 0, canvas.width, canvas.height);
       drawHarry();
       drawSpells();
       drawDeathEaters();
       drawWitches();
+
+      if (introActive) {
+        drawIntroScroll();
+      }
+
+      // Post-credits scene: scroll text from bottom to top after game over
+      if (gameOver) {
+        if (!postCreditsActive) {
+          postCreditsActive = true;
+          preparePostCredits();
+        }
+        drawPostCreditsScroll();
+      }
+
+      if (!gameOver) requestAnimationFrame(updateAndDraw);
     }
 
-    function gameLoop() {
-      update();
-      draw();
-      if (!gameOver) requestAnimationFrame(gameLoop);
+    // Start menu logic
+    function startGame() {
+      if (!gameStarted) {
+        gameStarted = true;
+        document.getElementById('startMenu').style.display = 'none';
+        const audio = document.getElementById('bg-music');
+        if (audio) {
+          audio.volume = 0.5;
+          audio.play().catch(() => {});
+        }
+        prepareIntro(); // <-- Add this line
+        requestAnimationFrame(updateAndDraw);
+      }
+    }
+    document.getElementById('startBtn').onclick = startGame;
+
+    // Show game over menu and retry button when game ends
+    function showGameOverMenu() {
+      document.getElementById('finalScore').textContent = "Final Score: " + score;
+      document.getElementById('gameOverMenu').style.display = 'flex';
     }
 
-    // Spawn Death Eaters every 1.2 seconds
-    setInterval(() => {
-      if (!gameOver) spawnDeathEater();
-    }, 1200);
+    // Retry button logic: refresh the page on click
+    document.getElementById('retryBtn').onclick = function() {
+      location.reload();
+    };
 
-    // Spawn witches every 2.2 seconds if score >= 30
-    setInterval(() => {
-      if (!gameOver && score >= 30) spawnWitch();
-    }, 2200);
-
-    gameLoop();
-
-    // Responsive: keep canvas centered and update enemy spawn mapping
+    // Responsive: keep Harry centered on resize
     window.addEventListener('resize', () => {
-      // Canvas stays 600x600, but mapping for spawnDeathEater will update on next spawn
-      // Harry stays centered
       harry.x = canvas.width / 2;
       harry.y = canvas.height / 2;
     });
