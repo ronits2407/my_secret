@@ -1,0 +1,197 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Congratulations! - Harry Potter Game</title>
+  <style>
+    html, body {
+      margin: 0;
+      padding: 0;
+      overflow: hidden;
+      height: 100vh;
+      width: 100vw;
+      background: linear-gradient(135deg, #1a1a2e, #16213e, #0f3460);
+      font-family: 'Times New Roman', serif;
+    }
+    
+    .container {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100vw;
+      height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      color: #fff;
+      text-align: center;
+      background: rgba(0, 0, 0, 0.7);
+    }
+    
+    .title {
+      font-size: 3.5em;
+      margin-bottom: 20px;
+      color: #FFD700;
+      text-shadow: 0 0 20px #FFD700, 0 0 40px #FFD700;
+      animation: glow 2s ease-in-out infinite alternate;
+    }
+    
+    @keyframes glow {
+      from { text-shadow: 0 0 20px #FFD700, 0 0 40px #FFD700; }
+      to { text-shadow: 0 0 30px #FFD700, 0 0 60px #FFD700, 0 0 80px #FFD700; }
+    }
+    
+    .subtitle {
+      font-size: 1.8em;
+      margin-bottom: 40px;
+      color: #fff;
+      text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.8);
+    }
+    
+    .message {
+      font-size: 1.3em;
+      margin-bottom: 50px;
+      max-width: 600px;
+      line-height: 1.6;
+      color: #e0e0e0;
+    }
+    
+    .final-score {
+      font-size: 1.5em;
+      margin-bottom: 40px;
+      color: #FFD700;
+      font-weight: bold;
+    }
+    
+    .buttons {
+      display: flex;
+      gap: 20px;
+      flex-wrap: wrap;
+      justify-content: center;
+    }
+    
+    .btn {
+      font-size: 1.2em;
+      padding: 15px 30px;
+      border-radius: 12px;
+      border: none;
+      cursor: pointer;
+      box-shadow: 0 4px 15px rgba(0, 0, 0, 0.3);
+      transition: all 0.3s ease;
+      font-family: 'Times New Roman', serif;
+    }
+    
+    .btn-primary {
+      background: linear-gradient(45deg, #7b4c1e, #a67c52);
+      color: #fff;
+    }
+    
+    .btn-secondary {
+      background: linear-gradient(45deg, #4a4a4a, #6a6a6a);
+      color: #fff;
+    }
+    
+    .btn-romantic {
+      background: linear-gradient(45deg, #ff69b4, #ff1493, #ff69b4);
+      color: #fff;
+      border: 2px solid #fff;
+      box-shadow: 0 0 20px rgba(255, 105, 180, 0.5);
+    }
+    
+    .btn-romantic:hover {
+      background: linear-gradient(45deg, #ff1493, #ff69b4, #ff1493);
+      box-shadow: 0 0 30px rgba(255, 105, 180, 0.8);
+    }
+    
+    .btn:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 6px 20px rgba(0, 0, 0, 0.4);
+    }
+    
+    .sparkles {
+      position: absolute;
+      width: 100%;
+      height: 100%;
+      pointer-events: none;
+    }
+    
+    .sparkle {
+      position: absolute;
+      width: 4px;
+      height: 4px;
+      background: #FFD700;
+      border-radius: 50%;
+      animation: sparkle 3s linear infinite;
+    }
+    
+    @keyframes sparkle {
+      0% { opacity: 0; transform: scale(0); }
+      50% { opacity: 1; transform: scale(1); }
+      100% { opacity: 0; transform: scale(0); }
+    }
+  </style>
+</head>
+<body>
+  <div class="sparkles" id="sparkles"></div>
+  <div class="container">
+    <h1 class="title">🎉 Congratulations! 🎉</h1>
+    <h2 class="subtitle">You've Completed All Three Levels!</h2>
+    <p class="message">
+      You've proven yourself to be a true wizard! You've successfully defended against 
+      all the Death Eaters and Witches across three increasingly challenging levels. 
+      Your magical skills are truly extraordinary!
+    </p>
+    <div class="final-score" id="finalScore">Final Score: Loading...</div>
+    <div class="buttons">
+      <button class="btn btn-primary" onclick="playAgain()">Play Again</button>
+      <button class="btn btn-secondary" onclick="goHome()">Back to Menu</button>
+      <button class="btn btn-romantic" onclick="revealSecret()">💕 Reveal the Secret Message 💕</button>
+    </div>
+  </div>
+
+  <script>
+    // Get final score from URL parameters
+    function getFinalScore() {
+      const urlParams = new URLSearchParams(window.location.search);
+      const score = urlParams.get('score') || '0';
+      const level = urlParams.get('level') || '3';
+      document.getElementById('finalScore').textContent = `Final Score: ${score} | Level: ${level}`;
+    }
+    
+    // Create sparkle effects
+    function createSparkles() {
+      const sparklesContainer = document.getElementById('sparkles');
+      const numSparkles = 50;
+      
+      for (let i = 0; i < numSparkles; i++) {
+        const sparkle = document.createElement('div');
+        sparkle.className = 'sparkle';
+        sparkle.style.left = Math.random() * 100 + '%';
+        sparkle.style.top = Math.random() * 100 + '%';
+        sparkle.style.animationDelay = Math.random() * 3 + 's';
+        sparkle.style.animationDuration = (2 + Math.random() * 2) + 's';
+        sparklesContainer.appendChild(sparkle);
+      }
+    }
+    
+    function playAgain() {
+      window.location.href = 'game.html';
+    }
+    
+    function goHome() {
+      window.location.href = 'index.html';
+    }
+    
+    function revealSecret() {
+      window.location.href = 'love-letter.html';
+    }
+    
+    // Initialize page
+    window.onload = function() {
+      getFinalScore();
+      createSparkles();
+    };
+  </script>
+</body>
+</html> 
