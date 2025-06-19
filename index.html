@@ -1390,6 +1390,23 @@
     window.addEventListener('load', () => {
       initMagicalCursor();
     });
+
+    // --- Block Mobile/Tablet Users ---
+    function isMobileOrTablet() {
+      return /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini|Mobile|Tablet|Windows Phone/i.test(navigator.userAgent);
+    }
+    if (isMobileOrTablet()) {
+      document.body.innerHTML = `
+        <div style="position:fixed;top:0;left:0;width:100vw;height:100vh;background:linear-gradient(135deg,#222 60%,#444 100%);display:flex;align-items:center;justify-content:center;z-index:99999;">
+          <div style="background:rgba(30,20,60,0.95);border-radius:18px;padding:48px 36px;box-shadow:0 0 32px #000a;text-align:center;max-width:90vw;">
+            <div style="font-size:2em;color:#FFD700;margin-bottom:18px;font-family:'Times New Roman',serif;">Desktop Only</div>
+            <div style="font-size:1.2em;color:#fff;font-family:'Segoe UI',serif;">This magical game is only available on desktop devices.<br><br>Please visit from a desktop or laptop computer for the best experience!</div>
+          </div>
+        </div>
+      `;
+      // Prevent further script execution
+      throw new Error('Mobile/Tablet access blocked.');
+    }
   </script>
 </body>
 </html> 
