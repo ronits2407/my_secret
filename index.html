@@ -319,26 +319,61 @@
     /* Achievement Notification */
     .achievement {
       position: fixed;
-      top: 50%;
-      left: 50%;
-      transform: translate(-50%, -50%);
-      background: linear-gradient(45deg, #FFD700, #FFA500);
-      color: #000;
-      padding: 20px 40px;
-      border-radius: 15px;
-      font-family: 'Times New Roman', serif;
-      font-size: 1.3em;
-      font-weight: bold;
+      top: 40px;
+      right: -400px;
+      min-width: 280px;
+      max-width: 350px;
+      background: rgba(20, 10, 40, 0.38);
+      box-shadow: 0 8px 32px 0 rgba(31, 38, 135, 0.18), 0 0 24px 4px #4e9cff66;
+      backdrop-filter: blur(18px);
+      -webkit-backdrop-filter: blur(18px);
+      border-radius: 20px;
+      border: 1.5px solid rgba(78, 156, 255, 0.38);
+      color: #e0d7ff;
+      padding: 28px 32px 24px 32px;
+      font-family: 'Segoe UI', 'Times New Roman', serif;
+      font-size: 1.25em;
+      font-weight: 600;
       z-index: 300;
       opacity: 0;
-      animation: achievementShow 3s ease-in-out forwards;
+      pointer-events: none;
+      transition: right 0.7s cubic-bezier(.77,0,.18,1), opacity 0.4s;
+      display: flex;
+      align-items: center;
+      gap: 16px;
+      box-shadow: 0 8px 32px 0 rgba(31, 38, 135, 0.18), 0 0 32px 8px #4e9cff44, 0 0 0 2px #FFD70033;
+    }
+    .achievement.slide-in {
+      right: 40px;
+      opacity: 1;
+      pointer-events: auto;
+    }
+    .achievement.slide-out {
+      right: -400px;
+      opacity: 0;
+      pointer-events: none;
     }
 
-    @keyframes achievementShow {
-      0% { opacity: 0; transform: translate(-50%, -50%) scale(0.5); }
-      20% { opacity: 1; transform: translate(-50%, -50%) scale(1.1); }
-      80% { opacity: 1; transform: translate(-50%, -50%) scale(1); }
-      100% { opacity: 0; transform: translate(-50%, -50%) scale(0.9); }
+    .achievement::before {
+      content: '';
+      position: absolute;
+      top: 0; left: 0; right: 0; bottom: 0;
+      border-radius: 20px;
+      background: linear-gradient(120deg, rgba(78,156,255,0.10) 0%, rgba(20,10,40,0.12) 100%);
+      pointer-events: none;
+      z-index: 1;
+      box-shadow: 0 0 24px 8px #FFD70022;
+    }
+
+    .achievement .icon {
+      font-size: 2em;
+      filter: drop-shadow(0 2px 8px #FFD70088) drop-shadow(0 0 6px #4e9cff88);
+      z-index: 2;
+    }
+
+    .achievement .text {
+      z-index: 2;
+      text-shadow: 0 1px 8px #000a, 0 0 4px #4e9cff44;
     }
 
     /* Dynamic Background System */
@@ -452,14 +487,20 @@
   <div class="magical-cursor" id="magicalCursor"></div>
   
   <!-- Enhanced UI Elements -->
-  <div id="healthBar">
-    <div id="healthFill" style="width: 100%;"></div>
+  <div style="position: fixed; top: 20px; left: 20px; z-index: 101; display: flex; flex-direction: column; gap: 18px;">
+    <div style="display: flex; align-items: center; gap: 10px;">
+      <div id="healthBar">
+        <div id="healthFill" style="width: 100%;"></div>
+      </div>
+      <span style="font-family: 'Segoe UI', serif; color: #FFD700; font-size: 1em; text-shadow: 0 1px 4px #000a; margin-left: 6px;">Health</span>
+    </div>
+    <div style="display: flex; flex-direction: column; align-items: flex-start; gap: 0;">
+      <div id="levelProgressBar">
+        <div id="levelProgressFill" style="width: 0%;"></div>
+      </div>
+      <span style="font-family: 'Segoe UI', serif; color: #4e9cff; font-size: 1em; text-shadow: 0 1px 4px #000a; margin-top: 8px; margin-left: 2px;">Progress</span>
+    </div>
   </div>
-  
-  <div id="levelProgressBar">
-    <div id="levelProgressFill" style="width: 0%;"></div>
-  </div>
-  
   <div id="scoreDisplay">Score: 0</div>
   
   <!-- Level Transition Overlay -->
@@ -712,23 +753,46 @@
       transition.classList.add('active');
       audioManager.playTeleport();
       
+      // Ensure transition is removed after animation
       setTimeout(() => {
-        transition.classList.remove('active');
+        if (transition && transition.classList.contains('active')) {
+          transition.classList.remove('active');
+        }
       }, 1000);
+      
+      // Additional safety check
+      setTimeout(() => {
+        if (transition && transition.classList.contains('active')) {
+          transition.classList.remove('active');
+        }
+      }, 2000);
     }
 
     function showAchievement(text) {
       const container = document.getElementById('achievementContainer');
       const achievement = document.createElement('div');
       achievement.className = 'achievement';
-      achievement.textContent = text;
+      // Split icon and text if present
+      let icon = '';
+      let message = text;
+      const match = text.match(/([\uD800-\uDBFF][\uDC00-\uDFFF]|[\u2600-\u27BF]|[\uD83C-\uDBFF\uDC00-\uDFFF]+)\s*(.*)/);
+      if (match) {
+        icon = match[1];
+        message = match[2];
+      }
+      achievement.innerHTML = `<span class="icon">${icon}</span><span class="text">${message}</span>`;
       container.appendChild(achievement);
-      
-      audioManager.playSuccess();
-      
+      // Slide in
+      setTimeout(() => achievement.classList.add('slide-in'), 10);
+      // Slide out after 2.5s
       setTimeout(() => {
-        container.removeChild(achievement);
-      }, 3000);
+        achievement.classList.remove('slide-in');
+        achievement.classList.add('slide-out');
+      }, 2500);
+      // Remove from DOM after animation
+      setTimeout(() => {
+        if (achievement.parentNode) container.removeChild(achievement);
+      }, 3200);
     }
 
     // Enhanced UI Update Functions
@@ -893,6 +957,9 @@
     function checkLevelProgress() {
       if (levelScore >= levelTarget) {
         if (currentLevel < 3) {
+          // Pause the game loop temporarily
+          gameStarted = false;
+          
           // Level up
           currentLevel++;
           levelScore = 0;
@@ -912,6 +979,13 @@
           
           // Update UI
           updateUI();
+          
+          // Resume game after transition
+          setTimeout(() => {
+            gameStarted = true;
+            requestAnimationFrame(updateAndDraw);
+          }, 1500); // Wait 1.5 seconds for transition
+          
         } else {
           // Game completed - redirect to won page
           stopDynamicBackground();
@@ -930,16 +1004,18 @@
     // Update UI elements
     function updateUI() {
       const levelDisplay = document.getElementById('levelDisplay');
-      const levelProgress = document.getElementById('levelProgress');
       
       levelDisplay.textContent = `Level: ${currentLevel}`;
-      const progressPercent = Math.min(100, Math.floor((levelScore / levelTarget) * 100));
-      levelProgress.textContent = `Progress: ${levelScore}/${levelTarget} (${progressPercent}%)`;
     }
 
     // Main update and draw loop
     function updateAndDraw(now) {
-      if (gameStarted && !gameOver) {
+      // Only run if game is started and not over
+      if (!gameStarted || gameOver) {
+        return;
+      }
+      
+      try {
         // Spawn Death Eaters
         if (now - lastDeathEaterSpawn > deathEaterInterval) {
           spawnDeathEater();
@@ -950,123 +1026,136 @@
           spawnWitch();
           lastWitchSpawn = now;
         }
-      }
 
-      // Update particles
-      updateParticles();
-      
-      // Update parallax background
-      updateParallax();
+        // Update particles
+        updateParticles();
+        
+        // Update parallax background
+        updateParallax();
 
-      // Move spells
-      for (let i = spells.length - 1; i >= 0; i--) {
-        const spell = spells[i];
-        spell.x += spell.dx * spell.speed;
-        spell.y += spell.dy * spell.speed;
-        if (
-          spell.x < -20 || spell.x > canvas.width + 20 ||
-          spell.y < -20 || spell.y > canvas.height + 20
-        ) {
-          spells.splice(i, 1);
-        }
-      }
-
-      // Move Death Eaters
-      for (let i = deathEaters.length - 1; i >= 0; i--) {
-        const de = deathEaters[i];
-        de.x += de.dx * de.speed;
-        de.y += de.dy * de.speed;
-        // Collision with Harry
-        if (Math.hypot(de.x - harry.x, de.y - harry.y) < 40) {
-          deathEaters.splice(i, 1);
-          lives--;
-          audioManager.playDeath();
-          if (lives <= 0) {
-            gameOver = true;
-            showGameOverMenu();
+        // Move spells
+        for (let i = spells.length - 1; i >= 0; i--) {
+          const spell = spells[i];
+          spell.x += spell.dx * spell.speed;
+          spell.y += spell.dy * spell.speed;
+          if (
+            spell.x < -20 || spell.x > canvas.width + 20 ||
+            spell.y < -20 || spell.y > canvas.height + 20
+          ) {
+            spells.splice(i, 1);
           }
-          continue;
         }
-        // Collision with spells
-        for (let j = spells.length - 1; j >= 0; j--) {
-          if (Math.hypot(de.x - spells[j].x, de.y - spells[j].y) < 32) {
+
+        // Move Death Eaters
+        for (let i = deathEaters.length - 1; i >= 0; i--) {
+          const de = deathEaters[i];
+          de.x += de.dx * de.speed;
+          de.y += de.dy * de.speed;
+          // Collision with Harry
+          if (Math.hypot(de.x - harry.x, de.y - harry.y) < 40) {
             deathEaters.splice(i, 1);
-            spells.splice(j, 1);
-            score++;
-            levelScore++;
-            // Enhanced death effects
-            createDeathParticles(de.x, de.y);
-            createMagicSparkles(de.x, de.y);
-            // Play enemy death sound
-            enemyDeadAudio.currentTime = 0;
-            enemyDeadAudio.play();
-            // Check level progress
-            checkLevelProgress();
-            break;
+            lives--;
+            audioManager.playDeath();
+            if (lives <= 0) {
+              gameOver = true;
+              showGameOverMenu();
+              return;
+            }
+            continue;
+          }
+          // Collision with spells
+          for (let j = spells.length - 1; j >= 0; j--) {
+            if (Math.hypot(de.x - spells[j].x, de.y - spells[j].y) < 32) {
+              deathEaters.splice(i, 1);
+              spells.splice(j, 1);
+              score++;
+              levelScore++;
+              // Enhanced death effects
+              createDeathParticles(de.x, de.y);
+              createMagicSparkles(de.x, de.y);
+              // Play enemy death sound
+              enemyDeadAudio.currentTime = 0;
+              enemyDeadAudio.play();
+              // Check level progress
+              checkLevelProgress();
+              break;
+            }
           }
         }
-      }
 
-      // Move Witches
-      for (let i = witches.length - 1; i >= 0; i--) {
-        const witch = witches[i];
-        witch.x += witch.dx * witch.speed;
-        witch.y += witch.dy * witch.speed;
-        // Collision with Harry
-        if (Math.hypot(witch.x - harry.x, witch.y - harry.y) < 40) {
-          witches.splice(i, 1);
-          lives--;
-          audioManager.playDeath();
-          if (lives <= 0) {
-            gameOver = true;
-            showGameOverMenu();
-          }
-          continue;
-        }
-        // Collision with spells
-        for (let j = spells.length - 1; j >= 0; j--) {
-          if (Math.hypot(witch.x - spells[j].x, witch.y - spells[j].y) < 32) {
+        // Move Witches
+        for (let i = witches.length - 1; i >= 0; i--) {
+          const witch = witches[i];
+          witch.x += witch.dx * witch.speed;
+          witch.y += witch.dy * witch.speed;
+          // Collision with Harry
+          if (Math.hypot(witch.x - harry.x, witch.y - harry.y) < 40) {
             witches.splice(i, 1);
-            spells.splice(j, 1);
-            score++;
-            levelScore++;
-            // Enhanced death effects
-            createDeathParticles(witch.x, witch.y);
-            createMagicSparkles(witch.x, witch.y);
-            // Play enemy death sound
-            enemyDeadAudio.currentTime = 0;
-            enemyDeadAudio.play();
-            // Check level progress
-            checkLevelProgress();
-            break;
+            lives--;
+            audioManager.playDeath();
+            if (lives <= 0) {
+              gameOver = true;
+              showGameOverMenu();
+              return;
+            }
+            continue;
+          }
+          // Collision with spells
+          for (let j = spells.length - 1; j >= 0; j--) {
+            if (Math.hypot(witch.x - spells[j].x, witch.y - spells[j].y) < 32) {
+              witches.splice(i, 1);
+              spells.splice(j, 1);
+              score++;
+              levelScore++;
+              // Enhanced death effects
+              createDeathParticles(witch.x, witch.y);
+              createMagicSparkles(witch.x, witch.y);
+              // Play enemy death sound
+              enemyDeadAudio.currentTime = 0;
+              enemyDeadAudio.play();
+              // Check level progress
+              checkLevelProgress();
+              break;
+            }
           }
         }
+
+        // Update enhanced UI
+        if (!gameOver) {
+          scoreboard.textContent = "Score: " + score + "  |  Lives: " + lives;
+          updateUI();
+          updateHealthBar();
+          updateLevelProgressBar();
+          updateScoreDisplay();
+        }
+
+        // Draw everything
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+        drawHarry();
+        drawSpells();
+        drawDeathEaters();
+        drawWitches();
+        drawParticles();
+
+        // Continue the loop only if game is still active
+        if (gameStarted && !gameOver) {
+          requestAnimationFrame(updateAndDraw);
+        }
+        
+      } catch (error) {
+        console.error('Error in game loop:', error);
+        // Try to recover and continue
+        if (gameStarted && !gameOver) {
+          requestAnimationFrame(updateAndDraw);
+        }
       }
-
-      // Update enhanced UI
-      if (!gameOver) {
-        scoreboard.textContent = "Score: " + score + "  |  Lives: " + lives;
-        updateUI();
-        updateHealthBar();
-        updateLevelProgressBar();
-        updateScoreDisplay();
-      }
-
-      // Draw everything
-      ctx.clearRect(0, 0, canvas.width, canvas.height);
-      drawHarry();
-      drawSpells();
-      drawDeathEaters();
-      drawWitches();
-      drawParticles();
-
-      if (!gameOver) requestAnimationFrame(updateAndDraw);
     }
 
     // Start menu logic
     function startGame() {
       if (!gameStarted) {
         gameStarted = true;
+        gameOver = false; // Reset game over state
         document.getElementById('startMenu').style.display = 'none';
         const audio = document.getElementById('bg-music');
         if (audio) {
@@ -1095,7 +1184,11 @@
         }, 1000);
         
         updateUI();
-        requestAnimationFrame(updateAndDraw);
+        
+        // Ensure game loop starts
+        if (gameStarted && !gameOver) {
+          requestAnimationFrame(updateAndDraw);
+        }
       }
     }
     document.getElementById('startBtn').onclick = startGame;
