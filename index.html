@@ -537,6 +537,19 @@
     <button id="retryBtn">Retry</button>
   </div>
   <script>
+    // Password protection before anything else loads
+    (function passwordProtect() {
+      var allowed = false;
+      while (!allowed) {
+        var answer = prompt('What is my fav movie?');
+        if (answer && answer.trim().toLowerCase() === 'titanic') {
+          allowed = true;
+        } else {
+          alert('Incorrect! Try again.');
+        }
+      }
+    })();
+
     // --- Game Variables ---
     let gameStarted = false;
     let gameOver = false;
